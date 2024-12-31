@@ -1,6 +1,8 @@
 import argparse
 import os
 
+from utils.f0 import get_aspace, get_vspace
+
 parser = argparse.ArgumentParser(description="Keitai 00F0F0 Assemble")
 parser.add_argument("input")
 parser.add_argument("output")
@@ -10,43 +12,27 @@ parser.add_argument(
     help="Lists alternatives for each block that has any.",
     action=argparse.BooleanOptionalAction,
 )
+parser.add_argument(
+    "-u",
+    "--undelete",
+    help="Undelete unused blocks.",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
+    "-s",
+    "--split",
+    help="Split all blocks.",
+    action=argparse.BooleanOptionalAction,
+)
 
 args = parser.parse_args()
 
 os.makedirs(args.output, exist_ok=True)
 
-virtual_space = dict()
-alt_space = dict()
-block_offset = 0
-with open(args.input, "rb") as file:
-    data = file.read(0x10000)
-    while len(data) > 0:
-        if data[0xFFF8:0xFFFA] == b"\xF0\xFF" and data[0xFFFE:0x10000] == b"\xF0\xF0":
-            offset = 0
-            while data[offset : offset + 2] != b"\xFF\xFF":
-                chunk_id = int.from_bytes(data[offset : offset + 2], "little")
-                start = int.from_bytes(data[offset + 2 : offset + 4], "little") << 8
-                size = int.from_bytes(data[offset + 4 : offset + 6], "little")
-                if data[offset + 7] == 0xF:
-                    assert chunk_id not in virtual_space
-                    virtual_space[chunk_id] = data[start : start + size]
-                if args.list_alt:
-                    if sum(data[start : start + size]) != 0xFF * size:
-                        alt = alt_space.get(chunk_id, [])
-                        alt.append(
-                            (
-                                start + block_offset,
-                                size,
-                                data[offset + 7] == 0xF,
-                                data[start : start + size],
-                            )
-                        )
-                        alt_space[chunk_id] = alt
-                offset += 0x10
-        block_offset += 0x10000
-        data = file.read(0x10000)
+virtual_space = get_vspace(args.input, undelete=args.undelete)
 
 if args.list_alt:
+    alt_space = get_aspace(args.input)
     for k, v in sorted(alt_space.items()):
         compl = set()
         toprint = False
@@ -60,6 +46,7 @@ if args.list_alt:
         if toprint:
             print(k)
             print("\n".join(lines))
+
 accumulator = bytearray()
 first_block_id = 0
 k = 0
@@ -67,7 +54,7 @@ for k, v in sorted(virtual_space.items()):
     if len(accumulator) == 0:
         first_block_id = k
     accumulator += v
-    if len(v) & 0xFF != 0:
+    if len(v) & 0xFF != 0 or args.split:
         with open(
             os.path.join(args.output, "%04d_%04d.bin" % (first_block_id, k)), "wb"
         ) as file:
