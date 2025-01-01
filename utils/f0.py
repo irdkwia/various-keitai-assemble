@@ -39,17 +39,16 @@ def get_aspace(filename):
                     chunk_id = int.from_bytes(data[offset : offset + 2], "little")
                     start = int.from_bytes(data[offset + 2 : offset + 4], "little") << 8
                     size = int.from_bytes(data[offset + 4 : offset + 6], "little")
-                    if sum(data[start : start + size]) != 0xFF * size:
-                        alt = alt_space.get(chunk_id, [])
-                        alt.append(
-                            (
-                                start + block_offset,
-                                size,
-                                data[offset + 7] == 0xF,
-                                data[start : start + size],
-                            )
+                    alt = alt_space.get(chunk_id, [])
+                    alt.append(
+                        (
+                            start + block_offset,
+                            size,
+                            data[offset + 7] == 0xF,
+                            data[start : start + size],
                         )
-                        alt_space[chunk_id] = alt
+                    )
+                    alt_space[chunk_id] = alt
                     offset += 0x10
             block_offset += 0x10000
             data = file.read(0x10000)

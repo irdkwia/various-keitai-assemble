@@ -22,7 +22,7 @@ EXTENSIONS = ["ico", "rms", "jar", "jad"]
 
 virtual_space = get_vspace(args.input, undelete=True)
 
-cdir = virtual_space[app_start - 1]
+cdir = virtual_space[args.app_start - 1]
 for j in range(len(cdir) // 0x38):
     off = j * 0x38
     if cdir[off : off + 8] == b"\x00\x00\x00\x00\x00\x00\x00\x00":
@@ -37,7 +37,7 @@ for j in range(len(cdir) // 0x38):
         data = bytearray()
         try:
             for i in range(cbsz):
-                data += virtual_space[app_start + coff + i]
+                data += virtual_space[args.app_start + coff + i]
             assert len(data) == size, f"{j} {cext}"
         except:
             print("Data for %04d.%s incomplete" % (j, EXTENSIONS[cext]))
