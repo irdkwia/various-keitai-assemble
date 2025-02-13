@@ -5,11 +5,11 @@ def get_vspace(filename, undelete=False):
         data = file.read(0x10000)
         while len(data) > 0:
             if (
-                data[0xFFF8:0xFFFA] == b"\xF0\xFF"
-                and data[0xFFFE:0x10000] == b"\xF0\xF0"
+                data[0xFFF8:0xFFFA] == b"\xf0\xff"
+                and data[0xFFFE:0x10000] == b"\xf0\xf0"
             ):
                 offset = 0
-                while data[offset : offset + 2] != b"\xFF\xFF":
+                while data[offset : offset + 2] != b"\xff\xff":
                     chunk_id = int.from_bytes(data[offset : offset + 2], "little")
                     start = int.from_bytes(data[offset + 2 : offset + 4], "little") << 8
                     size = int.from_bytes(data[offset + 4 : offset + 6], "little")
@@ -31,11 +31,11 @@ def get_aspace(filename):
         data = file.read(0x10000)
         while len(data) > 0:
             if (
-                data[0xFFF8:0xFFFA] == b"\xF0\xFF"
-                and data[0xFFFE:0x10000] == b"\xF0\xF0"
+                data[0xFFF8:0xFFFA] == b"\xf0\xff"
+                and data[0xFFFE:0x10000] == b"\xf0\xf0"
             ):
                 offset = 0
-                while data[offset : offset + 2] != b"\xFF\xFF":
+                while data[offset : offset + 2] != b"\xff\xff":
                     chunk_id = int.from_bytes(data[offset : offset + 2], "little")
                     start = int.from_bytes(data[offset + 2 : offset + 4], "little") << 8
                     size = int.from_bytes(data[offset + 4 : offset + 6], "little")

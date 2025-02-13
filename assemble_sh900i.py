@@ -13,9 +13,9 @@ with open(args.input, "rb") as file:
     data = file.read(0x20000)
     block_number = 0
     while len(data) > 0:
-        if data[0x1FFFC:0x20000] == b"\xF0\xF0\x00\xFF":
+        if data[0x1FFFC:0x20000] == b"\xf0\xf0\x00\xff":
             off = 0
-            while data[off : off + 4] != b"\xFF\xFF\xFF\xFF":
+            while data[off : off + 4] != b"\xff\xff\xff\xff":
                 chunk_id = int.from_bytes(data[off : off + 4], "little")
                 size = int.from_bytes(data[off + 4 : off + 6], "little")
                 loc = int.from_bytes(data[off + 6 : off + 8], "little")
