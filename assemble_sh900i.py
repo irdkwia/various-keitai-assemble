@@ -4,6 +4,13 @@ import os
 parser = argparse.ArgumentParser(description="Keitai SH900i Assemble")
 parser.add_argument("input")
 parser.add_argument("output")
+parser.add_argument(
+    "-i",
+    "--ignore",
+    help="Ignore assertions.",
+    action=argparse.BooleanOptionalAction,
+)
+
 args = parser.parse_args()
 
 os.makedirs(args.output, exist_ok=True)
@@ -22,9 +29,20 @@ with open(args.input, "rb") as file:
                 fs = data[off + 8]
                 if data[off + 11] == 0xFF:
                     vspace[fs] = vspace.get(fs, {})
-                    assert chunk_id not in vspace[fs], (
-                        hex(block_number) + " " + hex(off)
-                    )
+                    if args.ignore:
+                        if chunk_id in vspace[fs]:
+                            print(
+                                "Duplicate at %08X: region %d, block %d"
+                                % (block_number + off, fs, chunk_id)
+                            )
+                    else:
+                        assert (
+                            chunk_id not in vspace[fs]
+                        ), "Duplicate at %08X: region %d, block %d" % (
+                            block_number + off,
+                            fs,
+                            chunk_id,
+                        )
                     vspace[fs][chunk_id] = data[
                         0x1FFF0 - (loc << 9) : 0x1FFF0 - ((loc - size) << 9)
                     ]
