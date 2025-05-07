@@ -22,7 +22,9 @@ with open(args.input, "rb") as nand:
         cs = 0
         while len(spare) > 0:
             v = int.from_bytes(spare[2:4], "little") << 8
-            p = int.from_bytes(spare[4:6], "little", signed=True)
+            p = int.from_bytes(spare[6:7], "little") & 0xF
+            if int.from_bytes(spare[4:6], "little") == 0xFFFF:
+                e[v] = p
             for off in range(0x100):
                 if (
                     spare[off * 0x10 + 1] == 0xB8
@@ -32,9 +34,8 @@ with open(args.input, "rb") as nand:
                         print(hex(cs // 0x20))
                     else:
                         c = v | spare[off * 0x10]
-                        if c not in e:  # e.get(c, -1) <= p:
-                            e[c] = p
-                            d[c] = data[off * 0x200 : (off + 1) * 0x200]
+                        d[c] = d.get(c, {})
+                        d[c][p] = data[off * 0x200 : (off + 1) * 0x200]
             data = nand.read(0x20000)
             spare = oob.read(0x1000)
             cs += 0x20000
@@ -42,4 +43,10 @@ with open(args.input, "rb") as nand:
 with open(args.output, "wb") as file:
     for k, v in sorted(d.items()):
         file.seek(k * 0x200)
-        file.write(v)
+        c = k & (~0xFF)
+        x = bytearray(0)
+        f = e.get(c, 0)
+        for i in range(16):
+            if (f + i) & 0xF in v:
+                x = v[(f + i) & 0xF]
+        file.write(x)
