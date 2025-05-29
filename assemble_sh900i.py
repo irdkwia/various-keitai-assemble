@@ -10,24 +10,45 @@ parser.add_argument(
     help="Ignore assertions.",
     action=argparse.BooleanOptionalAction,
 )
+parser.add_argument(
+    "-c",
+    "--config",
+    help="Choose configuration. Accepted values: D506i, SH900i",
+    default="SH900i",
+    type=str,
+)
 
 args = parser.parse_args()
 
 os.makedirs(args.output, exist_ok=True)
 
+if args.config == "D506i":
+    SIZE = 0x40000
+    ENDIANESS = "big"
+    SHIFT = 4
+elif args.config == "SH900i":
+    SIZE = 0x20000
+    ENDIANESS = "little"
+    SHIFT = 9
+else:
+    raise ValueError(f"Invalid configuration: {args.config}")
+
 vspace = {}
 with open(args.input, "rb") as file:
-    data = file.read(0x20000)
+    data = file.read(SIZE)
     block_number = 0
     while len(data) > 0:
-        if data[0x1FFFC:0x20000] == b"\xf0\xf0\x00\xff":
+        if data[SIZE - 4 : SIZE] == b"\xf0\xf0\x00\xff":
             off = 0
             while data[off : off + 4] != b"\xff\xff\xff\xff":
-                chunk_id = int.from_bytes(data[off : off + 4], "little")
-                size = int.from_bytes(data[off + 4 : off + 6], "little")
-                loc = int.from_bytes(data[off + 6 : off + 8], "little")
+                chunk_id = int.from_bytes(data[off : off + 2], ENDIANESS)
+                size = int.from_bytes(data[off + 4 : off + 6], ENDIANESS)
+                loc = int.from_bytes(data[off + 6 : off + 8], ENDIANESS)
                 fs = data[off + 8]
-                if data[off + 11] == 0xFF:
+                if (
+                    int.from_bytes(data[off + 10 : off + 12], ENDIANESS) & 0xFF00
+                    == 0xFF00
+                ):
                     vspace[fs] = vspace.get(fs, {})
                     if args.ignore:
                         if chunk_id in vspace[fs]:
@@ -44,11 +65,15 @@ with open(args.input, "rb") as file:
                             chunk_id,
                         )
                     vspace[fs][chunk_id] = data[
-                        0x1FFF0 - (loc << 9) : 0x1FFF0 - ((loc - size) << 9)
+                        SIZE
+                        - 0x10
+                        - (loc << SHIFT) : SIZE
+                        - 0x10
+                        - ((loc - size) << SHIFT)
                     ]
                 off += 0xC
-        data = file.read(0x20000)
-        block_number += 0x20000
+        data = file.read(SIZE)
+        block_number += SIZE
 
 
 for k, v in vspace.items():
