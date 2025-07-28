@@ -24,3 +24,11 @@ Rearrange dump from SH704i / D904i FTLs.
 ## assemble_sh900i.py
 
 Extracts raw chunks from SH900i.
+
+## assemble_soffs.py
+
+Rearrange dump from SoFFS FTLs.
+
+## assemble_vsh.py
+
+Extracts raw chunks from Vodafone SH FTLs.
