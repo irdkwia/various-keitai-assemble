@@ -24,15 +24,22 @@ parser.add_argument(
     help="Split all blocks.",
     action=argparse.BooleanOptionalAction,
 )
+parser.add_argument(
+    "-b",
+    "--block-shift",
+    help="Shift for the blocks. 8 is for 0x10000 block size, 9 is for 0x20000 block size.",
+    default=8,
+    type=int,
+)
 
 args = parser.parse_args()
 
 os.makedirs(args.output, exist_ok=True)
 
-virtual_space = get_vspace(args.input, undelete=args.undelete)
+virtual_space = get_vspace(args.input, args.block_shift, undelete=args.undelete)
 
 if args.list_alt:
-    alt_space = get_aspace(args.input)
+    alt_space = get_aspace(args.input, args.block_shift)
     for k, v in sorted(alt_space.items()):
         compl = set()
         toprint = False

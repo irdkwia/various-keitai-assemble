@@ -13,6 +13,13 @@ parser.add_argument(
     default=5504,
     type=int,
 )
+parser.add_argument(
+    "-b",
+    "--block-shift",
+    help="Shift for the blocks. 8 is for 0x10000 block size, 9 is for 0x20000 block size.",
+    default=8,
+    type=int,
+)
 
 args = parser.parse_args()
 
@@ -20,7 +27,7 @@ os.makedirs(args.output, exist_ok=True)
 
 EXTENSIONS = ["ico", "rms", "jar", "jad"]
 
-virtual_space = get_vspace(args.input, undelete=True)
+virtual_space = get_vspace(args.input, args.block_shift, undelete=True)
 
 cdir = virtual_space[args.app_start - 1]
 for j in range(len(cdir) // 0x38):
