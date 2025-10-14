@@ -4,11 +4,17 @@ import os
 # oob must be separated
 parser = argparse.ArgumentParser(description="Keitai SH704i D904i Assemble")
 parser.add_argument("input")
+parser.add_argument(
+    "-ob",
+    "--input-oob",
+    default=None,
+    help="If not specified, a file with the same name as the input NAND file and the extension '.oob' in the same folder will be automatically used."
+)
 parser.add_argument("output")
 
 args = parser.parse_args()
 
-out_oob = os.path.join(
+out_oob = args.input_oob or os.path.join(
     os.path.dirname(args.input),
     f"{os.path.splitext(os.path.basename(args.input))[0]}.oob",
 )
