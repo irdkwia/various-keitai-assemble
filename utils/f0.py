@@ -1,5 +1,5 @@
-def get_vspace(filename, block_shift=8, undelete=False):
-    block_size = 256 << block_shift
+def get_vspace(filename, block_shift=8, number_block=8, undelete=False):
+    block_size = (1 << number_block) << block_shift
     virtual_space = dict()
     block_offset = 0
     with open(filename, "rb") as file:
@@ -18,12 +18,12 @@ def get_vspace(filename, block_shift=8, undelete=False):
                     )
                     size = (
                         int.from_bytes(data[offset + 4 : offset + 8], "little")
-                        if block_shift == 9
+                        if block_size == 0x20000
                         else int.from_bytes(data[offset + 4 : offset + 6], "little")
                     )
                     if (
                         data[offset + 8] == 0xFF
-                        if block_shift == 9
+                        if block_size == 0x20000
                         else data[offset + 7] == 0xF
                     ):
                         assert chunk_id not in virtual_space or undelete
@@ -36,8 +36,8 @@ def get_vspace(filename, block_shift=8, undelete=False):
     return virtual_space
 
 
-def get_aspace(filename, block_shift=8):
-    block_size = 256 << block_shift
+def get_aspace(filename, block_shift=8, number_block=8):
+    block_size = (1 << number_block) << block_shift
     alt_space = dict()
     block_offset = 0
     with open(filename, "rb") as file:
@@ -56,7 +56,7 @@ def get_aspace(filename, block_shift=8):
                     )
                     size = (
                         int.from_bytes(data[offset + 4 : offset + 8], "little")
-                        if block_shift == 9
+                        if block_size == 0x20000
                         else int.from_bytes(data[offset + 4 : offset + 6], "little")
                     )
                     alt = alt_space.get(chunk_id, [])

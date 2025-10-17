@@ -20,6 +20,13 @@ parser.add_argument(
     default=8,
     type=int,
 )
+parser.add_argument(
+    "-n",
+    "--number-block",
+    help="Number of blocks for each sector, expressed with a power of 2. Default is 8 for 2^8 blocks per sector.",
+    default=8,
+    type=int,
+)
 
 args = parser.parse_args()
 
@@ -27,7 +34,9 @@ os.makedirs(args.output, exist_ok=True)
 
 EXTENSIONS = ["ico", "rms", "jar", "jad"]
 
-virtual_space = get_vspace(args.input, args.block_shift, undelete=True)
+virtual_space = get_vspace(
+    args.input, args.block_shift, args.number_block, undelete=True
+)
 
 cdir = virtual_space[args.app_start - 1]
 for j in range(len(cdir) // 0x38):

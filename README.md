@@ -5,6 +5,9 @@ Extracts contents from some keitai phones. All scripts arguments can be seen wit
 ## assemble_f0.py
 
 Extracts raw chunks from F0 F0 structure, concatening them in order of their ID.
+`-b` argument specifies the size of each chunk, in power of 2.
+`-n` argument specifies the number of chunks for each F0 F0 sector, in power of 2.
+The sector size is determined by doing `size of chunk * number of chunks`.
 
 ## appsys_f0.py
 

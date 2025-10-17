@@ -27,7 +27,14 @@ parser.add_argument(
 parser.add_argument(
     "-b",
     "--block-shift",
-    help="Shift for the blocks. 8 is for 0x10000 block size, 9 is for 0x20000 block size.",
+    help="Size of the blocks, expressed in a power of 2. 8 is for 0x100 block size, 9 is for 0x200 block size.",
+    default=8,
+    type=int,
+)
+parser.add_argument(
+    "-n",
+    "--number-block",
+    help="Number of blocks for each sector, expressed in a power of 2. Default is 8 for 2^8 blocks per sector.",
     default=8,
     type=int,
 )
@@ -36,10 +43,12 @@ args = parser.parse_args()
 
 os.makedirs(args.output, exist_ok=True)
 
-virtual_space = get_vspace(args.input, args.block_shift, undelete=args.undelete)
+virtual_space = get_vspace(
+    args.input, args.block_shift, args.number_block, undelete=args.undelete
+)
 
 if args.list_alt:
-    alt_space = get_aspace(args.input, args.block_shift)
+    alt_space = get_aspace(args.input, args.block_shift, args.number_block)
     for k, v in sorted(alt_space.items()):
         compl = set()
         toprint = False
