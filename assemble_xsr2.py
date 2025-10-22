@@ -8,7 +8,7 @@ parser.add_argument(
     "-ob",
     "--input-oob",
     default=None,
-    help="If not specified, a file with the same name as the input NAND file and the extension '.oob' in the same folder will be automatically used."
+    help="If not specified, a file with the same name as the input NAND file and the extension '.oob' in the same folder will be automatically used.",
 )
 parser.add_argument("output")
 

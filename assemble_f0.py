@@ -65,10 +65,14 @@ if args.list_alt:
 
 accumulator = bytearray()
 first_block_id = 0
+prev_block = 0
 k = 0
 for k, v in sorted(virtual_space.items()):
     if len(accumulator) == 0:
         first_block_id = k
+        prev_block = k
+    if prev_block != k:
+        accumulator += bytes(len(v) * (k - prev_block))
     accumulator += v
     if len(v) & 0xFF != 0 or args.split:
         with open(
@@ -76,6 +80,7 @@ for k, v in sorted(virtual_space.items()):
         ) as file:
             file.write(accumulator)
         accumulator = bytearray()
+    prev_block = k + 1
 
 if len(accumulator) > 0:
     with open(
