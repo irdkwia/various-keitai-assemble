@@ -15,13 +15,21 @@ parser.add_argument(
     help="Return all data, even from unused blocks.",
     action=argparse.BooleanOptionalAction,
 )
+parser.add_argument(
+    "-c",
+    "--compact",
+    help="Compact mode. For 0x10000 structures.",
+    action=argparse.BooleanOptionalAction,
+)
 
 args = parser.parse_args()
 
 blocks = {}
 
+cp = 2 if args.compact else 1
+
 with open(args.input, "rb") as file:
-    data = file.read(0x20000)
+    data = file.read(0x20000 // cp)
     addr = 0
     while len(data) > 0:
         if (
@@ -32,20 +40,31 @@ with open(args.input, "rb") as file:
             and data[4:8] == data[16:20]
         ):
             if data[4] == 0xF2:
-                for i in range(253):
-                    blockid = int.from_bytes(data[0x400 + i * 2 : 0x402 + i * 2], "big")
+                for i in range(253 // cp):
+                    blockid = int.from_bytes(
+                        data[0x400 // cp + i * 2 * cp : 0x400 // cp + i * 2 * cp + 2],
+                        "big",
+                    )
                     if blockid != 0 and blockid != 0xFFFF:
                         blockid -= 1
                         try:
-                            assert blockid not in blocks, hex(addr + 0x400 + i * 2)
+                            assert blockid not in blocks, hex(
+                                addr + 0x400 // cp + i * 2 + 2
+                            )
                         except Exception as e:
                             if args.ignore:
                                 print(e)
                             else:
                                 raise e
-                        blocks[blockid] = data[i * 0x200 + 0x600 : i * 0x200 + 0x800]
-        data = file.read(0x20000)
-        addr += 0x20000
+                        blocks[blockid] = data[
+                            i * 0x200
+                            + 0x400 // cp
+                            + 0x200 : i * 0x200
+                            + 0x400 // cp
+                            + 0x400
+                        ]
+        data = file.read(0x20000 // cp)
+        addr += 0x20000 // cp
 
 with open(args.output, "wb") as file:
     for blockid, data in sorted(blocks.items()):
