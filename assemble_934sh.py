@@ -40,6 +40,7 @@ out_oob = args.input_oob or os.path.join(
 )
 virtual_space = {}
 alt_space = {}
+leftover = bytearray()
 with open(args.input, "rb") as nand:
     with open(out_oob, "rb") as oob:
         data = nand.read(0x20000)
@@ -47,50 +48,57 @@ with open(args.input, "rb") as nand:
         spare_addr = 0
         remaining = []
         while len(data) > 0:
-            if int.from_bytes(spare[0x20:0x24], "little") != 0xFFFFFFFF:
-                offset = 0x100
-                i = 0
-                while i < len(remaining):
-                    space, rb, remain_size = remaining[i]
-                    block_data = data[offset * 0x20 : offset * 0x20 + remain_size]
-                    remain_size -= len(block_data)
-                    space[rb] += block_data
-                    if remain_size > 0:
-                        remaining[i] = (space, rb, remain_size)
-                        i += 1
-                    else:
-                        del remaining[i]
-                while offset < 0x1000:
-                    marker = int.from_bytes(spare[offset : offset + 4], "little")
-                    if marker == 0xFFFFFFFF or args.undelete:
-                        block_id = int.from_bytes(
-                            spare[offset + 0x30 : offset + 0x34], "little"
-                        )
-                        if block_id not in [0xFFFFFFFE, 0xFFFFFFFF]:
-                            try:
-                                assert block_id not in virtual_space or args.undelete, (
-                                    hex(block_id) + " " + hex(spare_addr)
-                                )
-                            except Exception as e:
-                                if args.ignore:
-                                    print(e)
-                                else:
-                                    raise e
-                            size = int.from_bytes(
-                                spare[offset + 0x34 : offset + 0x38], "little"
+            sector_type = int.from_bytes(spare[0x20:0x24], "little")
+            if sector_type != 0xFFFFFFFF:
+                if sum(spare[:0x10]) != 0xFF0:
+                    leftover += data
+                else:
+                    offset = 0x100
+                    i = 0
+                    while i < len(remaining):
+                        space, remain_block, remain_size = remaining[i]
+                        block_data = data[offset * 0x20 : offset * 0x20 + remain_size]
+                        remain_size -= len(block_data)
+                        space[remain_block] += block_data
+                        if remain_size > 0:
+                            remaining[i] = (space, remain_block, remain_size)
+                            i += 1
+                        else:
+                            del remaining[i]
+                    while offset < 0x1000:
+                        marker = int.from_bytes(spare[offset : offset + 4], "little")
+                        if marker == 0xFFFFFFFF or args.undelete:
+                            block_id = int.from_bytes(
+                                spare[offset + 0x30 : offset + 0x34], "little"
                             )
-                            block_data = data[offset * 0x20 : offset * 0x20 + size]
-                            remain_size = size - len(block_data)
-                            space = alt_space if marker != 0xFFFFFFFF else virtual_space
-                            alt_space[block_id] = b""
-                            if remain_size > 0:
-                                remaining.append((space, block_id, remain_size))
-                            space[block_id] = block_data
-                    offset += 0x40
+                            if block_id not in [0xFFFFFFFE, 0xFFFFFFFF]:
+                                try:
+                                    assert (
+                                        block_id not in virtual_space or args.undelete
+                                    ), (hex(block_id) + " " + hex(spare_addr))
+                                except Exception as e:
+                                    if args.ignore:
+                                        print(e)
+                                    else:
+                                        raise e
+                                size = int.from_bytes(
+                                    spare[offset + 0x34 : offset + 0x38], "little"
+                                )
+                                block_data = data[offset * 0x20 : offset * 0x20 + size]
+                                remain_size = size - len(block_data)
+                                space = (
+                                    alt_space if marker != 0xFFFFFFFF else virtual_space
+                                )
+                                alt_space[block_id] = b""
+                                if remain_size > 0:
+                                    remaining.append((space, block_id, remain_size))
+                                space[block_id] = block_data
+                        offset += 0x40
             data = nand.read(0x20000)
             spare = oob.read(0x1000)
             spare_addr += 0x1000
-
+with open(os.path.join(args.output, "leftover.bin"), "wb") as file:
+    file.write(leftover)
 accumulator = bytearray()
 first_block_id = 0
 prev_block = 0
