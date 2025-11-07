@@ -110,7 +110,18 @@ for block_id, block_data in sorted(alt_space.items()):
         first_block_id = block_id
         prev_block = block_id
     if prev_block != block_id:
-        accumulator += bytes(len(block_data) * (block_id - prev_block))
+        if len(block_data) & 0x7FF != 0 or block_id - prev_block > 500:
+            with open(
+                os.path.join(
+                    args.output, "%04d_%04d.bin" % (first_block_id, prev_block)
+                ),
+                "wb",
+            ) as file:
+                file.write(accumulator)
+            accumulator = bytearray()
+            first_block_id = block_id
+        else:
+            accumulator += bytes(len(block_data) * (block_id - prev_block))
     accumulator += block_data
     if len(block_data) & 0x7FF != 0 or args.split:
         with open(
