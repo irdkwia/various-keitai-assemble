@@ -120,7 +120,6 @@ with open(args.input_nor, "rb") as nor:
                             alt_space[block_id] = b""
                             space[block_id] = block_data
                     offset += META_SIZE
-                print(hex(spare_addr))
                 sector_id += 1
             data = nor.read(0x20000)
             spare_addr += 0x20000
