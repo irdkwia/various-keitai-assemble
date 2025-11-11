@@ -13,7 +13,10 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-MAGIC = b"\x7c\x00\x00\x00\x10\x00\x1c\x00\x40\x00\x05\x39\x00\x01\x00\x02\x10\xc8\x00\x64\x0c\x00\x04\x00"
+MAGIC = [
+    b"\x7c\x00\x00\x00\x10\x00\x1c\x00\x40\x00\x05\x39\x00\x01\x00\x02\x10\xc8\x00\x64\x0c\x00\x04\x00",
+    b"\x78\x00\x00\x00\x10\x00\x1c\x00\x40\x00\x05\x39\x00\x01\x00\x02\x10\xc8\x00\x64\x0c\x00\x04\x00",
+]
 
 chunks = {}
 filestat = {}
@@ -21,7 +24,7 @@ for s in args.inputs:
     with open(s, "rb") as file:
         data = file.read(0x40)
         while len(data) > 0:
-            if data[0x14:0x2C] == MAGIC:
+            if data[0x14:0x2C] in MAGIC:
                 data += file.read(int.from_bytes(data[0x10:0x14], "little") - 0x40)
                 if data[0x30:0x34] == b"\x8c\x02\x00\x00":
                     chunks[int.from_bytes(data[0x40:0x44], "little") << 1] = data
