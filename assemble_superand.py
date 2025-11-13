@@ -47,6 +47,17 @@ if args.config == "811SH":
     CZ_LOC = None
     BSTART_LOC = 6
     BSIZE_LOC = 8
+elif args.config == "913SH":
+    OFFSET = 0x60000
+    SECTOR = 0x3E0000
+    BLOCK_UNIT = 0x800
+    META_SIZE = 0xC
+    END_LOC = 0
+    MARK_LOC = 1
+    BID_LOC = 4
+    CZ_LOC = None
+    BSTART_LOC = 6
+    BSIZE_LOC = 8
 elif args.config == "921SH":
     OFFSET = 0x1500000
     SECTOR = 0x760000

@@ -13,39 +13,45 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+FAT_START = b"\xeb\x3c\x90\x47\x52\x2d\x46\x49\x4c\x45\x20"
+
 os.makedirs(args.output, exist_ok=True)
 
-with open(args.input, 'rb') as file:
+with open(args.input, "rb") as file:
     data = file.read()
 
-len_sectors = len(data)//0x21*0x20
-acc = {}
-for x in range(len_sectors//0x4000):
-    spr = data[len_sectors+x*0x200:len_sectors+(x+1)*0x200]
-    cid = int.from_bytes(spr[0xA:0xE], 'big')
-    did = int.from_bytes(spr[0x2A:0x2E], 'big')
-    if cid==0xFFFFFFFF:
+len_sectors = len(data) // 0x21 * 0x20
+virtual_space = {}
+for sector in range(len_sectors // 0x4000):
+    spare = data[len_sectors + sector * 0x200 : len_sectors + (sector + 1) * 0x200]
+    block_id = int.from_bytes(spare[0xA:0xE], "big")
+    subblock_id = int.from_bytes(spare[0x2A:0x2E], "big")
+    if block_id == 0xFFFFFFFF:
         continue
-    if cid!=int.from_bytes(spr[0x1A:0x1E], 'big'):
+    if block_id != int.from_bytes(spare[0x1A:0x1E], "big"):
         continue
-    if cid!=int.from_bytes(spr[0x1EA:0x1EE], 'big'):
+    if block_id != int.from_bytes(spare[0x1EA:0x1EE], "big"):
         continue
-    if cid!=int.from_bytes(spr[0x1FA:0x1FE], 'big'):
+    if block_id != int.from_bytes(spare[0x1FA:0x1FE], "big"):
         continue
-    acc[cid] = acc.get(cid, [])
-    acc[cid].append((did, x*0x4000))
+    virtual_space[block_id] = virtual_space.get(block_id, [])
+    virtual_space[block_id].append((subblock_id, sector * 0x4000))
 
-final = bytearray()
-for k, v in sorted(acc.items()):
-    p, s = sorted(v)[-1]
-    final += data[s:s+0x4000]
+output = bytearray()
+for _, block_data in sorted(virtual_space.items()):
+    block_start = sorted(block_data)[-1][1]
+    output += data[block_start : block_start + 0x4000]
 
 if not args.split:
-    with open(os.path.join(args.output, "partition.bin"), 'wb') as file:
-        file.write(final)
+    with open(os.path.join(args.output, "partition.bin"), "wb") as file:
+        file.write(output)
 else:
-    final = bytes(final).split(b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xEB\x3C\x90\x47\x52\x2D\x46\x49\x4C\x45\x20')
+    output = bytes(output).split(
+        b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff" + FAT_START
+    )
 
-    for i, x in enumerate(final[1:]):
-        with open(os.path.join(args.output, "partition_%04d.bin"%i), 'wb') as file:
-            file.write(b'\xEB\x3C\x90\x47\x52\x2D\x46\x49\x4C\x45\x20'+x)
+    for partition_id, partition_data in enumerate(output[1:]):
+        with open(
+            os.path.join(args.output, "partition_%04d.bin" % partition_id), "wb"
+        ) as file:
+            file.write(FAT_START + partition_data)
