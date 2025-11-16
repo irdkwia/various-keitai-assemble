@@ -14,8 +14,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-os.makedirs(args.output, exist_ok=True)
-
 out_oob = args.input_oob or os.path.join(
     os.path.dirname(args.input),
     f"{os.path.splitext(os.path.basename(args.input))[0]}.oob",
