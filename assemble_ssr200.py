@@ -19,6 +19,22 @@ out_oob = args.input_oob or os.path.join(
     f"{os.path.splitext(os.path.basename(args.input))[0]}.oob",
 )
 
+LOC_PER_MODE = {
+    0: ((4, 8), (0, 4), False),
+    1: ((0, 8), (0, 4), True),
+    2: ((0, 0), (0, 0), True),
+}
+
+
+def get_spare_mode(spdata):
+    spmode = 1
+    if spdata[0x4:0x8] != b"\xff\xff\xff\xff":
+        spmode = 0
+    elif spdata[0x8:0xC] == b"\xff\xff\xff\xff":
+        spmode = 2
+    return spmode
+
+
 with open(args.input, "rb") as nand:
     with open(out_oob, "rb") as oob:
         data = nand.read(0x4000)
@@ -31,22 +47,19 @@ with open(args.input, "rb") as nand:
                 and data[0x8:0x10] != b"\xff\xff\xff\xff\xff\xff\xff\xff"
             ):
                 assert data[0x10:0x12] == b"\xf5\xaf", hex(data_addr)
-                mode = int.from_bytes(data[0x12:0x14], "little")
-                count2 = int.from_bytes(spare[0x8:0xC], "little")
-                if mode == 2:
-                    count = int.from_bytes(spare[0x4:0x8], "little")
-                elif mode == 3:
-                    count = int.from_bytes(spare[0x0:0x4], "little")
+                spare_mode = get_spare_mode(spare)
+                count_loc = LOC_PER_MODE[spare_mode][0]
+                count = int.from_bytes(spare[count_loc[0] : count_loc[0] + 4], "little")
+                count2 = int.from_bytes(
+                    spare[count_loc[1] : count_loc[1] + 4], "little"
+                )
+                if LOC_PER_MODE[spare_mode][2]:
                     if count & 0xFF != 0x00 and count2 & 0xFF != 0x00:
                         count >>= 8
                         count2 >>= 8
                     else:
                         count = -1
                         count2 = -2
-                else:
-                    raise ValueError("Unknown SSR mode: %d" % mode)
-                    count = -1
-                    count2 = -2
                 if count == count2:
                     assert count not in virtual_space, hex(data_addr)
                     virtual_space[count] = data_addr
@@ -57,14 +70,20 @@ with open(args.input, "rb") as nand:
             for sector_id, sector_addr in sorted(virtual_space.items()):
                 nand.seek(sector_addr)
                 data = nand.read(0x400)
-                mode = int.from_bytes(data[0x12:0x14], "little")
-                oob.seek(sector_addr // 0x20 + 0x20)
+                oob.seek(sector_addr // 0x20)
+                spare = oob.read(0x20)
+                spare_mode = get_spare_mode(spare)
+                count_loc = LOC_PER_MODE[spare_mode][1]
                 for i in range(30):
                     data = nand.read(0x200)
                     spare = oob.read(0x10)
-                    count = int.from_bytes(spare[0x0:0x4], "little")
-                    count2 = int.from_bytes(spare[0x4:0x8], "little")
-                    if mode == 3:
+                    count = int.from_bytes(
+                        spare[count_loc[0] : count_loc[0] + 4], "little"
+                    )
+                    count2 = int.from_bytes(
+                        spare[count_loc[1] : count_loc[1] + 4], "little"
+                    )
+                    if LOC_PER_MODE[spare_mode][2]:
                         if count & 0xFF != 0x00 and count2 & 0xFF != 0x00:
                             count >>= 8
                             count2 >>= 8
