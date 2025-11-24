@@ -47,6 +47,28 @@ if args.config == "811SH":
     CZ_LOC = None
     BSTART_LOC = 6
     BSIZE_LOC = 8
+elif args.config == "705SH":
+    OFFSET = 0x4000
+    SECTOR = 0x3F4000
+    BLOCK_UNIT = 0x200
+    META_SIZE = 0xC
+    END_LOC = 0
+    MARK_LOC = 1
+    BID_LOC = 4
+    CZ_LOC = None
+    BSTART_LOC = 6
+    BSIZE_LOC = 8
+elif args.config == "905SH":
+    OFFSET = 0x4000
+    SECTOR = 0x420000
+    BLOCK_UNIT = 0x200
+    META_SIZE = 0xC
+    END_LOC = 0
+    MARK_LOC = 1
+    BID_LOC = 4
+    CZ_LOC = None
+    BSTART_LOC = 6
+    BSIZE_LOC = 8
 elif args.config == "913SH":
     OFFSET = 0x60000
     SECTOR = 0x3E0000
@@ -82,10 +104,18 @@ with open(args.input_nor, "rb") as nor:
         seeking = -0x20000
         nor.seek(seeking, io.SEEK_END)
         data = nor.read(0x20000)
-        while data[0xE:0x10] == b"\xf0\xf0" or data[0xE:0x10] == b"\xff\xff":
-            seeking -= 0x20000
-            nor.seek(seeking, io.SEEK_END)
-            data = nor.read(0x20000)
+        mode = 0
+        while mode < 2:
+            if (mode == 0 and data[0xE:0x10] == b"\xf0\xf0") or (
+                mode == 1 and data[0xE:0x10] != b"\xf0\xf0"
+            ):
+                mode += 1
+            if mode < 2:
+                seeking -= 0x20000
+                nor.seek(seeking, io.SEEK_END)
+                if nor.tell() < 0x20000:
+                    break
+                data = nor.read(0x20000)
         nor.seek(seeking, io.SEEK_END)
         spare_addr = nor.tell()
         sector_id = 0
