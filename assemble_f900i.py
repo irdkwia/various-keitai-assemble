@@ -28,18 +28,27 @@ blocks = {}
 
 with open(args.input, "rb") as nand:
     with open(out_oob, "rb") as oob:
-        data = nand.read(0x4000)
         spare = oob.read(0x200)
         addr = 0
-        while len(data) > 0:
-            if (
-                spare[0x6:0x8] == b"\x55\x55"
-                and spare[0x1C:0x20] == b"\x69\x3c\x69\x3c"
-            ):
+        while len(spare) > 0:
+            if spare[0x1C:0x20] == b"\x69\x3c\x69\x3c":
                 blockid = int.from_bytes(spare[8:10], "little")
-                if blockid != 0xFFFF and blockid == int.from_bytes(
+                if blockid < 0x8000 and blockid == int.from_bytes(
                     spare[10:12], "little"
                 ):
+                    subblock = addr // 0x200
+                    data = bytearray(0x4000)
+                    while subblock != 0xFFFF:
+                        oob.seek(subblock * 0x200)
+                        nand.seek(subblock * 0x4000)
+                        spare = oob.read(0x200)
+                        sub = nand.read(0x4000)
+                        for i in range(0x20):
+                            if spare[i * 0x10 + 0x6 : i * 0x10 + 0x8] == b"\x55\x55":
+                                data[i * 0x200 : (i + 1) * 0x200] = sub[
+                                    i * 0x200 : (i + 1) * 0x200
+                                ]
+                        subblock = int.from_bytes(spare[0x38:0x3A], "little")
                     try:
                         assert blockid not in blocks, hex(addr)
                     except Exception as e:
@@ -48,7 +57,7 @@ with open(args.input, "rb") as nand:
                         else:
                             raise e
                     blocks[blockid] = data
-            data = nand.read(0x4000)
+                    oob.seek(addr + 0x200)
             spare = oob.read(0x200)
             addr += 0x200
 
