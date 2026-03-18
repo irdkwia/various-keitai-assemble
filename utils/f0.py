@@ -1,5 +1,10 @@
-def get_vspace(filename, block_shift=8, number_block=8, undelete=False):
+def get_vspace(
+    filename, block_shift=8, number_block=8, compact_size=None, undelete=False
+):
     block_size = (1 << number_block) << block_shift
+    if compact_size is None:
+        compact_size = block_size != 0x20000
+    size_file = 2 if compact_size else 4
     virtual_space = dict()
     block_offset = 0
     with open(filename, "rb") as file:
@@ -16,15 +21,13 @@ def get_vspace(filename, block_shift=8, number_block=8, undelete=False):
                         int.from_bytes(data[offset + 2 : offset + 4], "little")
                         << block_shift
                     )
-                    size = (
-                        int.from_bytes(data[offset + 4 : offset + 8], "little")
-                        if block_size == 0x20000
-                        else int.from_bytes(data[offset + 4 : offset + 6], "little")
+                    size = int.from_bytes(
+                        data[offset + 4 : offset + 4 + size_file], "little"
                     )
                     if (
-                        data[offset + 8] == 0xFF
+                        data[offset + 4 + size_file] == 0xFF
                         if block_size == 0x20000
-                        else data[offset + 7] == 0xF
+                        else data[offset + 5 + size_file] == 0xF
                     ):
                         assert chunk_id not in virtual_space or undelete
                         virtual_space[chunk_id] = data[start : start + size]
@@ -36,8 +39,11 @@ def get_vspace(filename, block_shift=8, number_block=8, undelete=False):
     return virtual_space
 
 
-def get_aspace(filename, block_shift=8, number_block=8):
+def get_aspace(filename, block_shift=8, number_block=8, compact_size=None):
     block_size = (1 << number_block) << block_shift
+    if compact_size is None:
+        compact_size = block_size != 0x20000
+    size_file = 2 if compact_size else 4
     alt_space = dict()
     block_offset = 0
     with open(filename, "rb") as file:
@@ -54,10 +60,8 @@ def get_aspace(filename, block_shift=8, number_block=8):
                         int.from_bytes(data[offset + 2 : offset + 4], "little")
                         << block_shift
                     )
-                    size = (
-                        int.from_bytes(data[offset + 4 : offset + 8], "little")
-                        if block_size == 0x20000
-                        else int.from_bytes(data[offset + 4 : offset + 6], "little")
+                    size = int.from_bytes(
+                        data[offset + 4 : offset + 4 + size_file], "little"
                     )
                     alt = alt_space.get(chunk_id, [])
                     alt.append(
@@ -65,9 +69,9 @@ def get_aspace(filename, block_shift=8, number_block=8):
                             start + block_offset,
                             size,
                             (
-                                data[offset + 8] == 0xFF
-                                if block_shift == 9
-                                else data[offset + 7] == 0xF
+                                data[offset + 4 + size_file] == 0xFF
+                                if block_size == 0x20000
+                                else data[offset + 5 + size_file] == 0xF
                             ),
                             data[start : start + size],
                         )

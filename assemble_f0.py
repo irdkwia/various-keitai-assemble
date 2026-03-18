@@ -38,17 +38,37 @@ parser.add_argument(
     default=8,
     type=int,
 )
+parser.add_argument(
+    "-c",
+    "--compact-size",
+    help="Use compact size.",
+    default=None,
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
+    "-x",
+    "--overflow-block",
+    help="Size for which block overflows, expressed in a power of 2. Default is None.",
+    default=None,
+    type=int,
+)
 
 args = parser.parse_args()
 
 os.makedirs(args.output, exist_ok=True)
 
 virtual_space = get_vspace(
-    args.input, args.block_shift, args.number_block, undelete=args.undelete
+    args.input,
+    args.block_shift,
+    args.number_block,
+    args.compact_size,
+    undelete=args.undelete,
 )
 
 if args.list_alt:
-    alt_space = get_aspace(args.input, args.block_shift, args.number_block)
+    alt_space = get_aspace(
+        args.input, args.block_shift, args.number_block, args.compact_size
+    )
     for k, v in sorted(alt_space.items()):
         compl = set()
         toprint = False
@@ -67,12 +87,17 @@ accumulator = bytearray()
 first_block_id = 0
 prev_block = 0
 k = 0
+old_size = 0
 for k, v in sorted(virtual_space.items()):
     if len(accumulator) == 0:
         first_block_id = k
         prev_block = k
-    if prev_block != k:
-        accumulator += bytes(len(v) * (k - prev_block))
+    if prev_block < k:
+        accumulator += bytes(old_size * (k - prev_block))
+    old_size = len(v)
+    if args.overflow_block:
+        old_size = min(old_size, 1 << args.overflow_block)
+        k += (len(v) - 1) // (1 << args.overflow_block)
     accumulator += v
     if len(v) & 0xFF != 0 or args.split:
         with open(
