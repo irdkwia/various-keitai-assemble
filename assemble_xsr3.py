@@ -83,16 +83,15 @@ with open(args.input, "rb") as nand:
                                                     ]
                                                     & 0x7F
                                                 )
-                                passing = 0
                                 for area in range(0xFC * nb_size):
-                                    if area % 0xFC == 0:
-                                        passing += 1
                                     sub_id = int.from_bytes(
                                         spare[
-                                            0x40 * passing
-                                            + area * 0x10
-                                            + 0x2 : 0x40 * passing
-                                            + area * 0x10
+                                            0x1000 * (area % 2)
+                                            + 0x40
+                                            + (area // 2) * 0x10
+                                            + 0x2 : 0x1000 * (area % 2)
+                                            + 0x40
+                                            + (area // 2) * 0x10
                                             + 0x4
                                         ],
                                         "little",
@@ -103,10 +102,13 @@ with open(args.input, "rb") as nand:
                                             block_id, {}
                                         )
                                         block_list[block_id][block] = data[
-                                            0x800 * passing
-                                            + 0x200 * area : 0x800 * passing
+                                            sector_size * (area % 2)
+                                            + 0x800
                                             + 0x200
-                                            + 0x200 * area
+                                            * (area // 2) : sector_size
+                                            * (area % 2)
+                                            + 0xA00
+                                            + 0x200 * (area // 2)
                                         ]
                                         if overwrite:
                                             block_select[block_id] = block
