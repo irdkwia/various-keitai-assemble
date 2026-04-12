@@ -64,10 +64,13 @@ with open(args.input, "rb") as nand:
                         block_select = {}
                         sector_id = 0
                         while sector_id < sector_nb:
-                            data = nand.read(SECTOR_SIZE * NB_SIZE)
-                            spare = oob.read(SECTOR_SIZE * NB_SIZE // 0x20)
-                            sector_id += NB_SIZE
+                            data = nand.read(SECTOR_SIZE)
+                            spare = oob.read(SECTOR_SIZE // 0x20)
+                            sector_id += 1
                             if data[0xC:0x10] == b"XSR1" and spare[OFFSET + 4] != 0:
+                                data += nand.read(SECTOR_SIZE * (NB_SIZE - 1))
+                                spare += oob.read(SECTOR_SIZE * (NB_SIZE - 1) // 0x20)
+                                sector_id += NB_SIZE - 1
                                 sector = int.from_bytes(data[0x10:0x14], "little")
                                 version = int.from_bytes(data[0x14:0x18], "little")
                                 for spare_offset in range(0, len(spare), 0x10):
