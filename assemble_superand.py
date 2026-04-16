@@ -39,6 +39,7 @@ args = parser.parse_args()
 if args.config == "811SH":
     OFFSET = 0x4000
     SECTOR = 0x428000
+    META_BLOCK_SIZE = 0x20000
     BLOCK_UNIT = 0x200
     META_SIZE = 0xC
     END_LOC = 0
@@ -50,6 +51,7 @@ if args.config == "811SH":
 elif args.config == "705SH":
     OFFSET = 0x4000
     SECTOR = 0x3F4000
+    META_BLOCK_SIZE = 0x20000
     BLOCK_UNIT = 0x200
     META_SIZE = 0xC
     END_LOC = 0
@@ -61,6 +63,7 @@ elif args.config == "705SH":
 elif args.config == "905SH":
     OFFSET = 0x4000
     SECTOR = 0x420000
+    META_BLOCK_SIZE = 0x20000
     BLOCK_UNIT = 0x200
     META_SIZE = 0xC
     END_LOC = 0
@@ -72,6 +75,7 @@ elif args.config == "905SH":
 elif args.config == "913SH":
     OFFSET = 0x60000
     SECTOR = 0x3E0000
+    META_BLOCK_SIZE = 0x20000
     BLOCK_UNIT = 0x800
     META_SIZE = 0xC
     END_LOC = 0
@@ -83,6 +87,7 @@ elif args.config == "913SH":
 elif args.config == "921SH":
     OFFSET = 0x1500000
     SECTOR = 0x760000
+    META_BLOCK_SIZE = 0x20000
     BLOCK_UNIT = 0x800
     META_SIZE = 0x10
     END_LOC = 0
@@ -91,6 +96,18 @@ elif args.config == "921SH":
     CZ_LOC = 6
     BSTART_LOC = 8
     BSIZE_LOC = 12
+elif args.config == "922SH":
+    OFFSET = 0x4000000
+    SECTOR = 0x6A0000
+    META_BLOCK_SIZE = 0x40000
+    BLOCK_UNIT = 0x800
+    META_SIZE = 0x20
+    END_LOC = 0x10
+    MARK_LOC = 0x11
+    BID_LOC = 0x14
+    CZ_LOC = 0x16
+    BSTART_LOC = 0x18
+    BSIZE_LOC = 0x1C
 else:
     raise ValueError(f"Invalid configuration: {args.config}")
 
@@ -101,9 +118,9 @@ alt_space = {}
 leftover = bytearray()
 with open(args.input_nor, "rb") as nor:
     with open(args.input_nand, "rb") as nand:
-        seeking = -0x20000
+        seeking = -META_BLOCK_SIZE
         nor.seek(seeking, io.SEEK_END)
-        data = nor.read(0x20000)
+        data = nor.read(META_BLOCK_SIZE)
         mode = 0
         while mode < 2:
             if (mode == 0 and data[0xE:0x10] == b"\xf0\xf0") or (
@@ -111,15 +128,15 @@ with open(args.input_nor, "rb") as nor:
             ):
                 mode += 1
             if mode < 2:
-                seeking -= 0x20000
+                seeking -= META_BLOCK_SIZE
                 nor.seek(seeking, io.SEEK_END)
-                if nor.tell() < 0x20000:
+                if nor.tell() < META_BLOCK_SIZE:
                     break
-                data = nor.read(0x20000)
+                data = nor.read(META_BLOCK_SIZE)
         nor.seek(seeking, io.SEEK_END)
         spare_addr = nor.tell()
         sector_id = 0
-        data = nor.read(0x20000)
+        data = nor.read(META_BLOCK_SIZE)
         while len(data) > 0:
             if data[0xE:0x10] == b"\xf0\xf0":
                 offset = 0x10
@@ -162,8 +179,8 @@ with open(args.input_nor, "rb") as nor:
                             space[block_id] = block_data
                     offset += META_SIZE
                 sector_id += 1
-            data = nor.read(0x20000)
-            spare_addr += 0x20000
+            data = nor.read(META_BLOCK_SIZE)
+            spare_addr += META_BLOCK_SIZE
 accumulator = bytearray()
 first_block_id = 0
 prev_block = 0
