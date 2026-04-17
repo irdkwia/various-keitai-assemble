@@ -210,6 +210,10 @@ with open(args.input_nor, "rb") as nor:
                 sector_id += 1
             data = nor.read(META_BLOCK_SIZE)
             spare_addr += META_BLOCK_SIZE
+
+if len(alt_space) == 0:
+    raise ValueError("The metadata could not be retrieved from the NOR file.")
+
 accumulator = bytearray()
 first_block_id = 0
 prev_block = 0
