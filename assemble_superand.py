@@ -2,6 +2,99 @@ import argparse
 import io
 import os
 
+DEFINITIONS = {
+    "811SH": {
+        "OFFSET": 0x4000,
+        "SECTOR": 0x428000,
+        "META_BLOCK_SIZE": 0x20000,
+        "BLOCK_UNIT": 0x200,
+        "META_SIZE": 0xC,
+        "END_LOC": 0,
+        "MARK_LOC": 1,
+        "BID_LOC": 4,
+        "CZ_LOC": None,
+        "BSTART_LOC": 6,
+        "BSIZE_LOC": 8,
+    },
+    "705SH": {
+        "OFFSET": 0x4000,
+        "SECTOR": 0x3F4000,
+        "META_BLOCK_SIZE": 0x20000,
+        "BLOCK_UNIT": 0x200,
+        "META_SIZE": 0xC,
+        "END_LOC": 0,
+        "MARK_LOC": 1,
+        "BID_LOC": 4,
+        "CZ_LOC": None,
+        "BSTART_LOC": 6,
+        "BSIZE_LOC": 8,
+    },
+    "905SH": {
+        "OFFSET": 0x4000,
+        "SECTOR": 0x420000,
+        "META_BLOCK_SIZE": 0x20000,
+        "BLOCK_UNIT": 0x200,
+        "META_SIZE": 0xC,
+        "END_LOC": 0,
+        "MARK_LOC": 1,
+        "BID_LOC": 4,
+        "CZ_LOC": None,
+        "BSTART_LOC": 6,
+        "BSIZE_LOC": 8,
+    },
+    "913SH": {
+        "OFFSET": 0x60000,
+        "SECTOR": 0x3E0000,
+        "META_BLOCK_SIZE": 0x20000,
+        "BLOCK_UNIT": 0x800,
+        "META_SIZE": 0xC,
+        "END_LOC": 0,
+        "MARK_LOC": 1,
+        "BID_LOC": 4,
+        "CZ_LOC": None,
+        "BSTART_LOC": 6,
+        "BSIZE_LOC": 8,
+    },
+    "921SH": {
+        "OFFSET": 0x1500000,
+        "SECTOR": 0x760000,
+        "META_BLOCK_SIZE": 0x20000,
+        "BLOCK_UNIT": 0x800,
+        "META_SIZE": 0x10,
+        "END_LOC": 0,
+        "MARK_LOC": 1,
+        "BID_LOC": 4,
+        "CZ_LOC": 6,
+        "BSTART_LOC": 8,
+        "BSIZE_LOC": 12,
+    },
+    "922SH": {
+        "OFFSET": 0x4000000,
+        "SECTOR": 0x6A0000,
+        "META_BLOCK_SIZE": 0x40000,
+        "BLOCK_UNIT": 0x800,
+        "META_SIZE": 0x20,
+        "END_LOC": 0x10,
+        "MARK_LOC": 0x11,
+        "BID_LOC": 0x14,
+        "CZ_LOC": 0x16,
+        "BSTART_LOC": 0x18,
+        "BSIZE_LOC": 0x1C,
+    },
+}
+
+CONFIGS = {
+    "905SH": DEFINITIONS["905SH"],
+    "705SH": DEFINITIONS["705SH"],
+    "811SH": DEFINITIONS["811SH"],
+    "913SH": DEFINITIONS["913SH"],
+    "920SH": DEFINITIONS["913SH"],
+    "821SH": DEFINITIONS["921SH"],
+    "921SH": DEFINITIONS["921SH"],
+    "DM001SH": DEFINITIONS["913SH"],
+    "922SH": DEFINITIONS["922SH"],
+}
+
 parser = argparse.ArgumentParser(description="Keitai SuperAND Assemble")
 parser.add_argument("input_nor")
 parser.add_argument("input_nand")
@@ -9,8 +102,8 @@ parser.add_argument("output")
 parser.add_argument(
     "-c",
     "--config",
-    help="Choose configuration. Accepted values: 811SH, 921SH",
-    default="811SH",
+    help="Choose configuration.",
+    choices=CONFIGS.keys(),
     type=str,
 )
 parser.add_argument(
@@ -35,81 +128,17 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-
-if args.config == "811SH":
-    OFFSET = 0x4000
-    SECTOR = 0x428000
-    META_BLOCK_SIZE = 0x20000
-    BLOCK_UNIT = 0x200
-    META_SIZE = 0xC
-    END_LOC = 0
-    MARK_LOC = 1
-    BID_LOC = 4
-    CZ_LOC = None
-    BSTART_LOC = 6
-    BSIZE_LOC = 8
-elif args.config == "705SH":
-    OFFSET = 0x4000
-    SECTOR = 0x3F4000
-    META_BLOCK_SIZE = 0x20000
-    BLOCK_UNIT = 0x200
-    META_SIZE = 0xC
-    END_LOC = 0
-    MARK_LOC = 1
-    BID_LOC = 4
-    CZ_LOC = None
-    BSTART_LOC = 6
-    BSIZE_LOC = 8
-elif args.config == "905SH":
-    OFFSET = 0x4000
-    SECTOR = 0x420000
-    META_BLOCK_SIZE = 0x20000
-    BLOCK_UNIT = 0x200
-    META_SIZE = 0xC
-    END_LOC = 0
-    MARK_LOC = 1
-    BID_LOC = 4
-    CZ_LOC = None
-    BSTART_LOC = 6
-    BSIZE_LOC = 8
-elif args.config == "913SH":
-    OFFSET = 0x60000
-    SECTOR = 0x3E0000
-    META_BLOCK_SIZE = 0x20000
-    BLOCK_UNIT = 0x800
-    META_SIZE = 0xC
-    END_LOC = 0
-    MARK_LOC = 1
-    BID_LOC = 4
-    CZ_LOC = None
-    BSTART_LOC = 6
-    BSIZE_LOC = 8
-elif args.config == "921SH":
-    OFFSET = 0x1500000
-    SECTOR = 0x760000
-    META_BLOCK_SIZE = 0x20000
-    BLOCK_UNIT = 0x800
-    META_SIZE = 0x10
-    END_LOC = 0
-    MARK_LOC = 1
-    BID_LOC = 4
-    CZ_LOC = 6
-    BSTART_LOC = 8
-    BSIZE_LOC = 12
-elif args.config == "922SH":
-    OFFSET = 0x4000000
-    SECTOR = 0x6A0000
-    META_BLOCK_SIZE = 0x40000
-    BLOCK_UNIT = 0x800
-    META_SIZE = 0x20
-    END_LOC = 0x10
-    MARK_LOC = 0x11
-    BID_LOC = 0x14
-    CZ_LOC = 0x16
-    BSTART_LOC = 0x18
-    BSIZE_LOC = 0x1C
-else:
-    raise ValueError(f"Invalid configuration: {args.config}")
+OFFSET = CONFIGS[args.config]["OFFSET"]
+SECTOR = CONFIGS[args.config]["SECTOR"]
+META_BLOCK_SIZE = CONFIGS[args.config]["META_BLOCK_SIZE"]
+BLOCK_UNIT = CONFIGS[args.config]["BLOCK_UNIT"]
+META_SIZE = CONFIGS[args.config]["META_SIZE"]
+END_LOC = CONFIGS[args.config]["END_LOC"]
+MARK_LOC = CONFIGS[args.config]["MARK_LOC"]
+BID_LOC = CONFIGS[args.config]["BID_LOC"]
+CZ_LOC = CONFIGS[args.config]["CZ_LOC"]
+BSTART_LOC = CONFIGS[args.config]["BSTART_LOC"]
+BSIZE_LOC = CONFIGS[args.config]["BSIZE_LOC"]
 
 os.makedirs(args.output, exist_ok=True)
 
