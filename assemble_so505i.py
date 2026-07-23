@@ -16,12 +16,18 @@ parser.add_argument(
     help="Use partition system.",
     action=argparse.BooleanOptionalAction,
 )
+parser.add_argument(
+    "-i",
+    "--ignore",
+    help="Ignore duplicate entries.",
+    action=argparse.BooleanOptionalAction,
+)
 
 args = parser.parse_args()
 
 os.makedirs(args.output, exist_ok=True)
 
-MAX_BLOCKS = 1000
+PARTITION_BLOCKS = 1000
 
 out_oob = args.input_oob or os.path.join(
     os.path.dirname(args.input),
@@ -36,6 +42,7 @@ while block:
             with open(out_oob, "rb") as oob:
                 data = nand.read(0x200)
                 spare = oob.read(0x10)
+                addr = 0
                 prev = (0xFFFF, 0xFFFF)
                 d = {}
                 while len(data) > 0:
@@ -46,10 +53,13 @@ while block:
                         if partition
                         else (0x1101 if id_1 != 0xFFFF else 0xFFFF)
                     )
-                    assert id_1 == id_2, f"Error: %04X, %04X vs %04X mismatch" % (
+                    assert (
+                        id_1 == id_2
+                    ), f"Error: %04X, %04X vs %04X mismatch / %08X" % (
                         assign,
                         id_1,
                         id_2,
+                        addr,
                     )
                     t = prev
                     prev = (id_1, assign)
@@ -61,14 +71,26 @@ while block:
                             d[actual_assign[0]][actual_assign[1]] = d[
                                 actual_assign[0]
                             ].get(actual_assign[1], {})
-                            assert (
-                                actual_id not in d[actual_assign[0]][actual_assign[1]]
-                            ), f"Error: %04X, %04X already exists" % (assign, id_1)
+                            try:
+                                assert (
+                                    actual_id
+                                    not in d[actual_assign[0]][actual_assign[1]]
+                                ), f"Error: %04X, %04X already exists / %08X" % (
+                                    assign,
+                                    id_1,
+                                    addr,
+                                )
+                            except Exception as e:
+                                if args.ignore:
+                                    print(e)
+                                else:
+                                    raise e
                             d[actual_assign[0]][actual_assign[1]][actual_id] = (
                                 bytearray(data)
                             )
                         else:
                             d[actual_assign[0]][actual_assign[1]][actual_id] += data
+                    addr += 0x200
                     data = nand.read(0x200)
                     spare = oob.read(0x10)
         block = False
@@ -83,8 +105,9 @@ for k, v in d.items():
         for k2, v2 in sorted(v.items()):
             ldata = len(v2[min(v2)])
             m = max(v2) + 1
-            assert m <= MAX_BLOCKS, f"{m} above {MAX_BLOCKS}"
-            for x in range(MAX_BLOCKS):
+            if m % PARTITION_BLOCKS != 0:
+                m += PARTITION_BLOCKS - (m % PARTITION_BLOCKS)
+            for x in range(m):
                 if x in v2:
                     file.write(v2[x])
                 else:
