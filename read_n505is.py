@@ -85,6 +85,9 @@ for i in range(LIST_START, LIST_END, 8):
                 ext = "jpg"
             elif file_data[:4] == b"PK\x03\x04":
                 ext = "zip"
+            elif (b"<HTML>" in file_data and b"</HTML>" in file_data
+                 or b"<html>" in file_data and b"</html>" in file_data):
+                ext = "html"
         path = os.path.join(args.output, *r[1])
         os.makedirs(path, exist_ok=True)
         with open(
