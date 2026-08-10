@@ -11,6 +11,12 @@ parser.add_argument(
     help="If not specified, a file with the same name as the input NAND file and the extension '.oob' in the same folder will be automatically used.",
 )
 parser.add_argument("output")
+parser.add_argument(
+    "-f",
+    "--full-scan",
+    help="Scan all dump for XSR partition blocks instead of following XSRPARTI specs.",
+    action=argparse.BooleanOptionalAction,
+)
 
 args = parser.parse_args()
 
@@ -36,6 +42,10 @@ with open(args.input, "rb") as nand:
                     part_table[part + 8 : part + 12], "little"
                 )
                 sector_nb = int.from_bytes(part_table[part + 12 : part + 16], "little")
+                if args.full_scan:
+                    sector_start = 0
+                    nand.seek(0, 2)
+                    sector_nb = nand.tell() // sector_size
                 nand.seek(sector_size * sector_start)
                 oob.seek(sector_size * sector_start // 0x20)
                 with open(
