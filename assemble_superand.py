@@ -3,6 +3,19 @@ import io
 import os
 
 DEFINITIONS = {
+    "705SH": {
+        "OFFSET": 0x4000,
+        "SECTOR": 0x3F4000,
+        "META_BLOCK_SIZE": 0x20000,
+        "BLOCK_UNIT": 0x200,
+        "META_SIZE": 0xC,
+        "END_LOC": 0,
+        "MARK_LOC": 1,
+        "BID_LOC": 4,
+        "CZ_LOC": None,
+        "BSTART_LOC": 6,
+        "BSIZE_LOC": 8,
+    },
     "811SH": {
         "OFFSET": 0x4000,
         "SECTOR": 0x428000,
@@ -29,9 +42,9 @@ DEFINITIONS = {
         "BSTART_LOC": 6,
         "BSIZE_LOC": 8,
     },
-    "705SH": {
+    "905SH": {
         "OFFSET": 0x4000,
-        "SECTOR": 0x3F4000,
+        "SECTOR": 0x420000,
         "META_BLOCK_SIZE": 0x20000,
         "BLOCK_UNIT": 0x200,
         "META_SIZE": 0xC,
@@ -42,9 +55,9 @@ DEFINITIONS = {
         "BSTART_LOC": 6,
         "BSIZE_LOC": 8,
     },
-    "905SH": {
+    "911SH": {
         "OFFSET": 0x4000,
-        "SECTOR": 0x420000,
+        "SECTOR": 0x428000,
         "META_BLOCK_SIZE": 0x20000,
         "BLOCK_UNIT": 0x200,
         "META_SIZE": 0xC,
@@ -97,16 +110,17 @@ DEFINITIONS = {
 }
 
 CONFIGS = {
-    "905SH": DEFINITIONS["905SH"],
     "705SH": DEFINITIONS["705SH"],
     "811SH": DEFINITIONS["811SH"],
     "812SH": DEFINITIONS["812SH"],
+    "821SH": DEFINITIONS["921SH"],
+    "905SH": DEFINITIONS["905SH"],
+    "911SH": DEFINITIONS["911SH"],
     "913SH": DEFINITIONS["913SH"],
     "920SH": DEFINITIONS["913SH"],
-    "821SH": DEFINITIONS["921SH"],
     "921SH": DEFINITIONS["921SH"],
-    "DM001SH": DEFINITIONS["913SH"],
     "922SH": DEFINITIONS["922SH"],
+    "DM001SH": DEFINITIONS["913SH"],
 }
 
 parser = argparse.ArgumentParser(description="Keitai SuperAND Assemble")
@@ -161,7 +175,8 @@ alt_space = {}
 leftover = bytearray()
 with open(args.input_nor, "rb") as nor:
     with open(args.input_nand, "rb") as nand:
-        seeking = -META_BLOCK_SIZE
+        nor.seek(0, io.SEEK_END)
+        seeking = -META_BLOCK_SIZE-(nor.tell()%META_BLOCK_SIZE)
         nor.seek(seeking, io.SEEK_END)
         data = nor.read(META_BLOCK_SIZE)
         mode = 0
