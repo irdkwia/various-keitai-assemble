@@ -176,7 +176,7 @@ leftover = bytearray()
 with open(args.input_nor, "rb") as nor:
     with open(args.input_nand, "rb") as nand:
         nor.seek(0, io.SEEK_END)
-        seeking = -META_BLOCK_SIZE-(nor.tell()%META_BLOCK_SIZE)
+        seeking = -META_BLOCK_SIZE - (nor.tell() % META_BLOCK_SIZE)
         nor.seek(seeking, io.SEEK_END)
         data = nor.read(META_BLOCK_SIZE)
         mode = 0
