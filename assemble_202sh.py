@@ -36,41 +36,52 @@ super_spare = bytearray()
 super_data = bytearray()
 with open(args.input, "rb") as nand:
     with open(out_oob, "rb") as oob:
-        # TODO: may be dynamic
-        nand.seek(0x26000)
-        data = nand.read(0x1000)
-        sectors = [
-            int.from_bytes(data[i : i + 2], "little") for i in range(0, len(data), 2)
-        ]
-        add_sector = 4
+        nand.seek(0x200)
+        headers = []
+        while True:
+            data = nand.read(0x4)
+            if data == b"\xff\xff\xff\xff":
+                break
+            headers.append(int.from_bytes(data, "little"))
+        for element in headers:
+            nand.seek(element * 0x20000)
+            off = 0
+            while off < 0x1F800:
+                data = nand.read(0x1800)
+                off += 0x1800
+                if data[0x1000:0x1004] != b"\xff\xff\xff\xff":
+                    sectors = [
+                        int.from_bytes(data[i : i + 2], "little")
+                        for i in range(0, 0x1000, 2)
+                    ]
+        add_sector = 0
         for element in sectors:
             nand.seek(element * 0x20000)
             oob.seek(element * 0x1000)
             data = nand.read(0x20000)
             spare = oob.read(0x1000)
-            sector_type = int.from_bytes(spare[0x24:0x28], "little")
-            if add_sector == 4:
+            if int.from_bytes(spare[0x4:0x8], "little") == 0xFFFFFFFE:
+                add_sector = 4
                 sector_id = int.from_bytes(data[:4], "little")
-            if sector_type != 0xFFFFFFFF:
-                if add_sector < 4 or (
-                    int.from_bytes(spare[0x4:0x8], "little") == 0xFFFFFFFE
-                    and sector_id != 0xFFFFFFFF
-                ):
-                    super_data += bytes(max(0, sector_id * 0x80000 - len(super_data)))
+            if add_sector > 0:
+                if sector_id != 0xFFFFFFFF:
+                    super_data += bytes(
+                        [0xFF] * max(0, sector_id * 0x80000 - len(super_data))
+                    )
                     super_data[
                         sector_id * 0x80000
                         + (4 - add_sector) * 0x20000 : sector_id * 0x80000
                         + (5 - add_sector) * 0x20000
                     ] = data
-                    super_spare += bytes(max(0, sector_id * 0x4000 - len(super_spare)))
+                    super_spare += bytes(
+                        [0xFF] * max(0, sector_id * 0x4000 - len(super_spare))
+                    )
                     super_spare[
                         sector_id * 0x4000
                         + (4 - add_sector) * 0x1000 : sector_id * 0x4000
                         + (5 - add_sector) * 0x1000
                     ] = spare
                     add_sector -= 1
-                    if add_sector == 0:
-                        add_sector = 4
 virtual_space = {}
 offset = 0
 block_stop = 0
@@ -80,8 +91,14 @@ while offset < len(super_spare):
     block_id = int.from_bytes(super_spare[offset + 4 : offset + 8], "little")
     block_size = int.from_bytes(super_spare[offset + 0x14 : offset + 0x18], "little")
     if block_stop > 0:
-        assert block_id == s_block_id, s_block_id
-        assert block_size == s_block_size, s_block_size
+        try:
+            assert block_id == s_block_id, "Error ID %08X" % s_block_id
+            assert block_size == s_block_size, "Error Size %08X" % s_block_size
+        except Exception as e:
+            if args.ignore:
+                print(e)
+            else:
+                raise e
         block_stop -= 1
     else:
         if block_id not in [0xFFFFFFFE, 0xFFFFFFFF]:
